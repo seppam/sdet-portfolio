@@ -12,6 +12,14 @@ services:
       timeout: 3s
       retries: 20
 
+  # Alternatif: Floci, pengganti LocalStack tanpa akun (port 4566 seperti LocalStack).
+  #   docker compose --profile floci up -d floci
+  floci:
+    image: floci/floci:2.4.0
+    profiles: ["floci"]
+    ports:
+      - "4566:4566"
+
   app:
     build: .
     command: uvicorn app.main:app --host 0.0.0.0 --port 8077

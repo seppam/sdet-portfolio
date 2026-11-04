@@ -1,8 +1,9 @@
 # Jalankan `make help` untuk lihat semua perintah.
-.PHONY: help install moto-up moto-down mini-aws dev lint test-fast test-int test-int-mini test-e2e test-all report
+.PHONY: help install moto-up moto-down floci-up mini-aws dev lint test-fast test-int test-int-floci test-int-mini test-e2e test-all report
 
 MOTO_URL := http://localhost:5055
 MINI_URL := http://localhost:5066
+FLOCI_URL := http://localhost:4566
 
 help:
 	@grep -E '^[a-z-]+:.*## ' Makefile | awk 'BEGIN{FS=":.*## "}{printf "  %-14s %s\n",$$1,$$2}'
@@ -14,8 +15,11 @@ install: ## Install dependency + browser Playwright
 moto-up: ## Nyalakan moto server (Docker) di port 5055
 	docker compose up -d moto
 
-moto-down: ## Matikan moto server
-	docker compose down
+moto-down: ## Matikan semua emulator
+	docker compose --profile floci down
+
+floci-up: ## Nyalakan Floci (pengganti LocalStack) di port 4566
+	docker compose --profile floci up -d floci
 
 mini-aws: ## Nyalakan mini-aws buatan sendiri di port 5066 (foreground)
 	uv run python -m mini_aws --port 5066 --verbose
@@ -31,6 +35,9 @@ test-fast: ## Unit + API + test mini-aws (tanpa Docker)
 
 test-int: ## Integration test ke moto
 	AWS_ENDPOINT_URL=$(MOTO_URL) uv run pytest tests/integration
+
+test-int-floci: ## Integration test ke Floci (butuh floci-up)
+	AWS_ENDPOINT_URL=$(FLOCI_URL) uv run pytest tests/integration
 
 test-int-mini: ## Integration test ke mini-aws (nyalakan `make mini-aws` dulu)
 	AWS_ENDPOINT_URL=$(MINI_URL) uv run pytest tests/integration
