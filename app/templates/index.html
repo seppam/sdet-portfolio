@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h1>Upload laporan pengeluaran</h1>
+  <p class="muted">Format CSV: <code>date,description,category,amount</code>. Kategori: makan, transport, akomodasi, lainnya.</p>
+  {% if error %}<div class="alert" role="alert" data-testid="upload-error">{{ error }}</div>{% endif %}
+  <form action="/upload" method="post" enctype="multipart/form-data">
+    <label for="file">File CSV</label>
+    <input id="file" name="file" type="file" accept=".csv" data-testid="file-input" required>
+    <button type="submit" data-testid="upload-button">Upload</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Job terakhir</h2>
+  {% if jobs %}
+  <table data-testid="jobs-table">
+    <thead><tr><th>File</th><th>Status</th><th>Waktu</th></tr></thead>
+    <tbody>
+    {% for job in jobs %}
+      <tr>
+        <td><a href="/jobs/{{ job.id }}">{{ job.filename }}</a></td>
+        <td class="status status-{{ job.status }}">{{ job.status }}</td>
+        <td class="muted">{{ job.created_at }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted" data-testid="jobs-empty">Belum ada upload.</p>
+  {% endif %}
+</section>
+{% endblock %}

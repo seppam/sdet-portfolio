@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Job {{ job.id }} · Struk Kilat{% endblock %}
+{% block content %}
+<section class="card" data-testid="job-card">
+  <h1>{{ job.filename }}</h1>
+  <p>Status: <span class="status status-{{ job.status }}" data-testid="job-status">{{ job.status }}</span></p>
+
+  {% if job.status in ("queued", "processing") %}
+    <p class="muted">Sedang diproses, halaman ini refresh otomatis…</p>
+    <script>setTimeout(() => location.reload(), 1000);</script>
+  {% endif %}
+
+  {% if job.status == "failed" %}
+    <div class="alert" role="alert" data-testid="job-error">{{ job.error }}</div>
+  {% endif %}
+
+  {% if job.result %}
+    <h2>Ringkasan</h2>
+    <table data-testid="totals-table">
+      <thead><tr><th>Kategori</th><th class="num">Total</th></tr></thead>
+      <tbody>
+      {% for cat, total in job.result.totals.items() %}
+        <tr><td>{{ cat }}</td><td class="num">{{ total | rupiah }}</td></tr>
+      {% endfor %}
+        <tr><th>Total</th><th class="num" data-testid="grand-total">{{ job.result.grand_total | rupiah }}</th></tr>
+      </tbody>
+    </table>
+    <p class="muted" data-testid="row-counts">{{ job.result.valid_rows }} baris valid, {{ job.result.invalid_rows }} baris ditolak</p>
+
+    {% if job.result.errors %}
+    <h2>Baris yang ditolak</h2>
+    <table data-testid="errors-table">
+      <thead><tr><th>Baris</th><th>Alasan</th></tr></thead>
+      <tbody>
+      {% for e in job.result.errors %}
+        <tr><td>{{ e.row }}</td><td>{{ e.reason }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  {% endif %}
+</section>
+<p><a href="/">← Upload lagi</a></p>
+{% endblock %}
