@@ -1,0 +1,111 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_PYTHON: "3.12"
+
+jobs:
+  # 1) Paling murah & cepat dulu: kalau lint/unit gagal, tidak perlu buang waktu di E2E.
+  fast:
+    name: lint + unit + api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen
+      - name: Lint
+        run: uv run ruff check .
+      - name: Unit + API + mini-aws self-test
+        run: >
+          uv run pytest tests/unit tests/api tests/mini_aws
+          --cov --cov-report=term --cov-report=html:reports/coverage
+          --html=reports/fast.html --self-contained-html
+          --junitxml=reports/fast.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-fast
+          path: reports/
+
+  # 2) Integration: test yang sama dijalankan ke TIGA emulator (matrix).
+  #    Kalau hasilnya beda, berarti ada emulator yang belum setia ke perilaku AWS.
+  integration:
+    needs: fast
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        emulator: [moto, floci, mini-aws]
+    services:
+      moto:
+        image: motoserver/moto:latest
+        ports: ["5055:5000"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen
+      - name: Pilih emulator
+        run: |
+          if [ "${{ matrix.emulator }}" = "mini-aws" ]; then
+            uv run python -m mini_aws --port 5066 &
+            echo "AWS_ENDPOINT_URL=http://localhost:5066" >> "$GITHUB_ENV"
+          elif [ "${{ matrix.emulator }}" = "floci" ]; then
+            docker run -d -p 4566:4566 floci/floci:2.4.0
+            echo "AWS_ENDPOINT_URL=http://localhost:4566" >> "$GITHUB_ENV"
+          else
+            echo "AWS_ENDPOINT_URL=http://localhost:5055" >> "$GITHUB_ENV"
+          fi
+      - name: Tunggu emulator siap
+        run: |
+          for i in $(seq 1 30); do curl -s -o /dev/null "$AWS_ENDPOINT_URL" && exit 0; sleep 1; done
+          echo "emulator tidak siap" && exit 1
+      - name: Integration tests
+        run: >
+          uv run pytest tests/integration
+          --html=reports/integration-${{ matrix.emulator }}.html --self-contained-html
+          --junitxml=reports/integration-${{ matrix.emulator }}.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-integration-${{ matrix.emulator }}
+          path: reports/
+
+  # 3) E2E paling mahal, jalan terakhir.
+  e2e:
+    needs: fast
+    runs-on: ubuntu-latest
+    services:
+      moto:
+        image: motoserver/moto:latest
+        ports: ["5055:5000"]
+    env:
+      AWS_ENDPOINT_URL: http://localhost:5055
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen
+      - name: Install browser
+        run: uv run playwright install --with-deps chromium
+      - name: E2E tests
+        run: >
+          uv run pytest tests/e2e
+          --tracing retain-on-failure --screenshot only-on-failure
+          --output test-results
+          --html=reports/e2e.html --self-contained-html
+          --junitxml=reports/e2e.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-e2e
+          path: |
+            reports/
+            test-results/
