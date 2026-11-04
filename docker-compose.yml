@@ -1,0 +1,45 @@
+# Jalankan semuanya:  docker compose up --build
+# Cuma emulator AWS:   docker compose up -d moto
+services:
+  moto:
+    image: motoserver/moto:latest
+    # Port 5000 di macOS sering dipakai AirPlay, jadi kita pakai 5055 di host.
+    ports:
+      - "5055:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:5000/moto-api/')\""]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8077
+    ports:
+      - "8077:8077"
+    environment: &app_env
+      AWS_ENDPOINT_URL: http://moto:5000
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: ap-southeast-3
+      STRUK_BUCKET: struk-uploads
+      STRUK_QUEUE: struk-jobs
+      STRUK_DB_PATH: /data/struk.db
+    volumes:
+      - appdata:/data
+    depends_on:
+      moto:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: python -m app.worker
+    environment: *app_env
+    volumes:
+      - appdata:/data
+    depends_on:
+      moto:
+        condition: service_healthy
+
+volumes:
+  appdata:
