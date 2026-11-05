@@ -1,3 +1,5 @@
+name: sdet-portfolio
+
 # Jalankan semuanya:  docker compose up --build
 # Cuma emulator AWS:   docker compose up -d moto
 services:
