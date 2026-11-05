@@ -17,10 +17,10 @@ jobs:
   # 1) Paling murah & cepat dulu: kalau lint/unit gagal, tidak perlu buang waktu di E2E.
   fast:
     name: lint + unit + api
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
       - run: uv sync --frozen
       - name: Lint
         run: uv run ruff check .
@@ -30,7 +30,7 @@ jobs:
           --cov --cov-report=term --cov-report=html:reports/coverage
           --html=reports/fast.html --self-contained-html
           --junitxml=reports/fast.xml
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: report-fast
@@ -40,7 +40,7 @@ jobs:
   #    Kalau hasilnya beda, berarti ada emulator yang belum setia ke perilaku AWS.
   integration:
     needs: fast
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -50,8 +50,8 @@ jobs:
         image: motoserver/moto:latest
         ports: ["5055:5000"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
       - run: uv sync --frozen
       - name: Pilih emulator
         run: |
@@ -73,7 +73,7 @@ jobs:
           uv run pytest tests/integration
           --html=reports/integration-${{ matrix.emulator }}.html --self-contained-html
           --junitxml=reports/integration-${{ matrix.emulator }}.xml
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: report-integration-${{ matrix.emulator }}
@@ -82,7 +82,7 @@ jobs:
   # 3) E2E paling mahal, jalan terakhir.
   e2e:
     needs: fast
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       moto:
         image: motoserver/moto:latest
@@ -90,8 +90,8 @@ jobs:
     env:
       AWS_ENDPOINT_URL: http://localhost:5055
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
       - run: uv sync --frozen
       - name: Install browser
         run: uv run playwright install --with-deps chromium
@@ -102,7 +102,7 @@ jobs:
           --output test-results
           --html=reports/e2e.html --self-contained-html
           --junitxml=reports/e2e.xml
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: report-e2e
