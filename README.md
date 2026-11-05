@@ -1,12 +1,20 @@
 # Struk Kilat: SDET portfolio
 
-[![tests](https://github.com/seppam/sdet-portfolio/actions/workflows/tests.yml/badge.svg)](../../actions/workflows/tests.yml)
+[![tests](https://github.com/seppam/sdet-portfolio/actions/workflows/tests.yml/badge.svg)](https://github.com/seppam/sdet-portfolio/actions/workflows/tests.yml)
+![Python 3.12](https://img.shields.io/badge/python-3.12-3776ab)
+![Playwright](https://img.shields.io/badge/E2E-Playwright-2ead33)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 A small expense-report app (CSV upload → S3 → SQS → worker), built so it could be
 **tested in layers**: unit, API, integration against an AWS emulator, and E2E in a real browser.
 The app is small on purpose. This repo is mainly about the **test strategy**.
 
 > Bahasa Indonesia: dokumen strategi lengkap ada di [docs/test-strategy.md](docs/test-strategy.md).
+
+![Recorded user journey: upload a valid CSV, then one with rejected rows, then a file with a bad header](docs/img/demo.gif)
+
+*The journey above was recorded by Playwright against the app running on the moto emulator
+(`status: processing → done` happens live as the worker picks up the SQS message).*
 
 | Upload | Result with rejected rows |
 |---|---|
@@ -107,3 +115,13 @@ tests/
 samples/        CSV files used by E2E and manual testing
 docs/           test strategy, bug reports
 ```
+
+## About
+
+Built by **Muhamad Septian Pamungkas** as an SDET portfolio project, coming from manual QA.
+It is a learning project, not production software.
+Portfolio: [septian-pamungkas.vercel.app](https://septian-pamungkas.vercel.app)
+
+## License
+
+[MIT](LICENSE)
